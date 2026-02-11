@@ -1,0 +1,554 @@
+
+    <!DOCTYPE html>
+    <html lang="en" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>דו״ח מכירות הורים וילדים</title>
+        <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+        <style>
+            :root {
+                --brand-blue: #2EA7EB; 
+                --brand-young: #8B5CF6; 
+                --bg: #0f172a; 
+                --card: #1e293b; 
+                --text: #f8fafc; 
+                --text-muted: #94a3b8;
+                --success: #10b981; 
+                --warning: #f59e0b; 
+                --danger: #ef4444;
+                --gold: #fbbf24;
+
+                --header-height: 180px; /* Init value */
+            }
+            body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-top: 0; }
+            .container { max-width: 1300px; margin: 0 auto; }
+
+            /* STICKY HEADER WRAPPER */
+            .sticky-top-section {
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+                background-color: var(--bg);
+                padding-top: 20px;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+                box-shadow: 0 15px 15px -5px rgba(0,0,0,0.4);
+            }
+
+            .header { text-align: center; margin-bottom: 15px; }
+            h1 { font-weight: 900; font-size: 2.2rem; margin: 0; background: linear-gradient(90deg, var(--brand-blue), var(--brand-young)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .subtitle { color: var(--text-muted); font-size: 1rem; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 15px; }
+
+            .clock { font-size: 1.5rem; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); font-family: 'Courier New', monospace; letter-spacing: 1px; }
+
+            .controls-row { 
+                background: var(--card); padding: 10px 20px; border-radius: 12px; border: 1px solid #334151;
+                display: flex; justify-content: space-between; align-items: center; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            }
+            .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+            .filter-pill { 
+                background: #0f172a; color: #ccc; padding: 6px 12px; border-radius: 20px; 
+                cursor: pointer; font-size: 0.85rem; user-select: none; transition: 0.2s; border: 1px solid #334151;
+            }
+            .filter-pill.active { background: var(--success); color: white; border-color: var(--success); box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+
+            .month-select { 
+                background: #0f172a; color: white; border: 1px solid #334151; padding: 6px 12px; border-radius: 8px; font-family: inherit; font-weight: bold; cursor: pointer; font-size: 0.9rem;
+            }
+
+            .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; }
+            .tab-btn { background: var(--card); border: 1px solid #334151; color: var(--text-muted); padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+            .tab-btn.active { background: var(--brand-blue); color: white; border-color: var(--brand-blue); box-shadow: 0 0 15px rgba(46, 167, 235, 0.4); }
+            .tab-content { display: none; animation: fadeIn 0.4s; }
+            .tab-content.active { display: block; }
+
+            /* IMPORTANT: Separate border-collapse for sticky header to work properly */
+            table { 
+                width: 100%; 
+                border-collapse: separate; 
+                border-spacing: 0; 
+                background: var(--card); 
+                border-radius: 12px; 
+                margin-bottom: 30px; 
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            }
+
+            th { 
+                background-color: #1e293b; /* Must be solid color */
+                color: var(--text-muted); 
+                padding: 16px; 
+                text-align: right; 
+                font-size: 0.85rem; 
+                text-transform: uppercase; 
+                letter-spacing: 0.05em; 
+
+                /* Sticky Magic */
+                position: sticky; 
+                top: var(--header-height);
+                z-index: 500;
+
+                border-bottom: 2px solid #334151;
+            }
+            /* Fix top radius for first and last th */
+            th:first-child { border-top-right-radius: 12px; }
+            th:last-child { border-top-left-radius: 12px; }
+
+            td { padding: 14px 16px; border-bottom: 1px solid #334151; vertical-align: middle; font-size: 0.95rem; }
+            tr:last-child td { border-bottom: none; }
+            tr:hover { background: #2d3748; }
+
+            .agent-name { font-weight: 700; font-size: 1.05rem; }
+            .group-tag { font-size: 0.7rem; background: #374151; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; margin-right: 8px; font-weight: normal; }
+            .clickable { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; color: var(--text); }
+            .clickable:hover { color: var(--brand-blue); }
+            .clickable.zero { opacity: 0.4; cursor: default; text-decoration: none; }
+
+            .trend-wrapper { display: flex; align-items: center; justify-content: center; gap: 8px; }
+            .trend-arrow { font-size: 1.2rem; }
+            .trend-diff { font-weight: bold; font-size: 0.9rem; font-family: monospace; }
+            .mini-chart { width: 100px; height: 40px; display: inline-block; vertical-align: middle; }
+
+            .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+            .stat-card { background: var(--card); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #334151; }
+            .stat-val { font-size: 2.2rem; font-weight: 800; }
+            .stat-lbl { color: var(--text-muted); font-size: 0.8rem; margin-top: 5px; }
+            .chart-box { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334151; height: 400px; margin-bottom: 30px; position: relative; }
+
+            .hm-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 2px; overflow-x: auto; }
+            .hm-cell { height: 35px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border-radius: 4px; color: #000; font-weight: 800; }
+            .hm-head { background: #334151; color: white; }
+
+            .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); }
+            .modal-content { background: var(--card); margin: 5% auto; width: 90%; max-width: 600px; border-radius: 12px; overflow: hidden; border: 1px solid #475569; animation: slideUp 0.3s; }
+            .modal-header { padding: 20px; background: #0f172a; border-bottom: 1px solid #334151; display: flex; justify-content: space-between; align-items: center; }
+            .modal-body { padding: 0; max-height: 60vh; overflow-y: auto; }
+            .modal-table th { position: sticky; top: 0; background: #0f172a; z-index: 10; }
+            .ticket-badge { font-family: monospace; background: #334151; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; color: #e2e8f0; }
+            .copy-btn { cursor: pointer; margin-right: 5px; color: var(--brand-blue); }
+
+            @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        </style>
+    </head>
+    <body>
+
+    <div class="container">
+
+        <div class="sticky-top-section" id="stickyHeader">
+            <div class="header">
+                <h1>דו״ח מכירות הורים וילדים</h1>
+                <div class="subtitle">
+                    <span>יום חמישי</span> | 
+                    <span>12/02/2026</span> |
+                    <span id="liveClock" class="clock"></span>
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <div class="filters" id="filterContainer"></div>
+                <div>
+                    <select id="monthFilter" class="month-select" onchange="onMonthChange()">
+                        </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab-btn active" onclick="setTab('dashboard')">לוח בקרה ראשי</div>
+            <div class="tab-btn" onclick="setTab('science')">מגמות</div>
+            <div class="tab-btn" onclick="setTab('heatmap')">מפת חום</div>
+        </div>
+
+        <div id="dashboard" class="tab-content active">
+            <div class="grid-3">
+                <div class="stat-card">
+                    <div class="stat-val" style="color: var(--gold)" id="card-total">0</div>
+                    <div class="stat-lbl">סה"כ הנפקות</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" style="color: var(--brand-young)" id="card-young">0</div>
+                    <div class="stat-lbl">Young (ילדים)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" style="color: var(--brand-blue)" id="card-plus">0</div>
+                    <div class="stat-lbl">Plus (הורים)</div>
+                </div>
+            </div>
+
+            <div class="chart-box" style="height: 300px;">
+                <canvas id="mainBarChart"></canvas>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align:right">נציג</th>
+                        <th class="col-daily">אתמול</th>
+                        <th class="col-daily">שבוע</th>
+                        <th>סה"כ לחודש</th>
+                        <th class="col-forecast">תחזית</th>
+                        <th style="text-align:center">מגמה (14 יום)</th>
+                        <th>שב"ר</th>
+                    </tr>
+                </thead>
+                <tbody id="agentTableBody"></tbody>
+            </table>
+        </div>
+
+        <div id="science" class="tab-content">
+            <div class="grid-3">
+                <div class="stat-card">
+                    <div class="stat-lbl">Young חודש קודם</div>
+                    <div class="stat-val" style="color: #94a3b8">2</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-lbl">Young בחודש הנבחר</div>
+                    <div class="stat-val" style="color: var(--brand-young)" id="sci-young">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-lbl">Plus בחודש הנבחר</div>
+                    <div class="stat-val" style="color: var(--brand-blue)" id="sci-plus">0</div>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <canvas id="scienceChart"></canvas>
+            </div>
+        </div>
+
+        <div id="heatmap" class="tab-content">
+            <div style="background: var(--card); padding: 20px; border-radius: 12px;">
+                <h3 style="margin-top:0; text-align:center; color: var(--text-muted)">שעות הנפקה בחודש הנבחר</h3>
+                <div class="hm-grid" id="heatmapGrid"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin:0" id="modalTitle">Details</h3>
+                <span style="cursor:pointer; font-size:1.5rem;" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <table class="modal-table">
+                    <thead><tr><th>תאריך</th><th>סוג</th><th>טיקט</th></tr></thead>
+                    <tbody id="modalBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const agents = [{"agent": "\u05e0\u05d9\u05dc", "group": "CS Managers", "yest": 0, "wtd": 0, "mtd": 5, "total": 6, "forecast": 10, "csat": "-", "trend_data": [0, 0, 1, 2, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-5", "sales_details": [{"date": "2026-02-02", "ticket_id": "1294159", "card_type": "Young", "ts": 1770059112, "hour": 19, "weekday": 1}, {"date": "2026-02-04", "ticket_id": "1299372", "card_type": "Plus", "ts": 1770228131, "hour": 18, "weekday": 3}, {"date": "2026-02-05", "ticket_id": "1301783", "card_type": "Plus", "ts": 1770301922, "hour": 14, "weekday": 4}, {"date": "2026-01-12", "ticket_id": "1294838", "card_type": "Young", "ts": 1768233264, "hour": 15, "weekday": 1}, {"date": "2026-02-01", "ticket_id": "1294838", "card_type": "Young", "ts": 1769962764, "hour": 16, "weekday": 0}, {"date": "2026-02-02", "ticket_id": "1297201", "card_type": "Young", "ts": 1770009199, "hour": 5, "weekday": 1}]}, {"agent": "\u05d3\u05e0\u05d9\u05d4", "group": "Service", "yest": 0, "wtd": 8, "mtd": 29, "total": 32, "forecast": 58, "csat": "-", "trend_data": [0, 1, 1, 6, 5, 2, 5, 2, 0, 8, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-10", "sales_details": [{"date": "2026-02-05", "ticket_id": "1299186", "card_type": "Plus", "ts": 1770321586, "hour": 19, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1299051", "card_type": "Young", "ts": 1770304297, "hour": 15, "weekday": 4}, {"date": "2026-02-04", "ticket_id": "1298724", "card_type": "Young", "ts": 1770204184, "hour": 11, "weekday": 3}, {"date": "2026-02-02", "ticket_id": "1284377", "card_type": "Young", "ts": 1770007859, "hour": 4, "weekday": 1}, {"date": "2026-02-01", "ticket_id": "1296802", "card_type": "Young", "ts": 1769954616, "hour": 14, "weekday": 0}, {"date": "2026-02-03", "ticket_id": "1294899", "card_type": "Plus", "ts": 1770101471, "hour": 6, "weekday": 2}, {"date": "2026-02-05", "ticket_id": "1296344", "card_type": "Plus", "ts": 1770303026, "hour": 14, "weekday": 4}, {"date": "2026-02-08", "ticket_id": "1302460", "card_type": "Young", "ts": 1770540097, "hour": 8, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1303341", "card_type": "Plus", "ts": 1770562688, "hour": 14, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1302941", "card_type": "Young", "ts": 1770553802, "hour": 12, "weekday": 0}, {"date": "2026-02-06", "ticket_id": "1290937", "card_type": "Young", "ts": 1770372344, "hour": 10, "weekday": 5}, {"date": "2026-02-08", "ticket_id": "1303397", "card_type": "Plus", "ts": 1770558423, "hour": 13, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1303343", "card_type": "Plus", "ts": 1770555733, "hour": 13, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1303178", "card_type": "Young", "ts": 1770558277, "hour": 13, "weekday": 0}, {"date": "2026-02-02", "ticket_id": "1297610", "card_type": "Young", "ts": 1770017865, "hour": 7, "weekday": 1}, {"date": "2026-02-02", "ticket_id": "1299460", "card_type": "Plus", "ts": 1770051053, "hour": 16, "weekday": 1}, {"date": "2026-01-29", "ticket_id": "1295698", "card_type": "Young", "ts": 1769685257, "hour": 11, "weekday": 4}, {"date": "2026-02-02", "ticket_id": "1295698", "card_type": "Young", "ts": 1770068369, "hour": 21, "weekday": 1}, {"date": "2026-01-31", "ticket_id": "1296680", "card_type": "Plus", "ts": 1769841009, "hour": 6, "weekday": 6}, {"date": "2026-02-03", "ticket_id": "1296680", "card_type": "Young", "ts": 1770149371, "hour": 20, "weekday": 2}, {"date": "2026-02-04", "ticket_id": "1295974", "card_type": "Plus", "ts": 1770192919, "hour": 8, "weekday": 3}, {"date": "2026-02-03", "ticket_id": "1300043", "card_type": "Young", "ts": 1770126535, "hour": 13, "weekday": 2}, {"date": "2026-02-03", "ticket_id": "1253629", "card_type": "Young", "ts": 1770108618, "hour": 8, "weekday": 2}, {"date": "2025-12-23", "ticket_id": "1299342", "card_type": "Young", "ts": 1766498607, "hour": 14, "weekday": 2}, {"date": "2026-02-03", "ticket_id": "1299342", "card_type": "Young", "ts": 1770112613, "hour": 9, "weekday": 2}, {"date": "2026-02-05", "ticket_id": "1299160", "card_type": "Plus", "ts": 1770275690, "hour": 7, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1298912", "card_type": "Young", "ts": 1770300619, "hour": 14, "weekday": 4}, {"date": "2026-02-02", "ticket_id": "1299178", "card_type": "Plus", "ts": 1770015495, "hour": 6, "weekday": 1}, {"date": "2026-02-02", "ticket_id": "1298770", "card_type": "Young", "ts": 1770040750, "hour": 13, "weekday": 1}, {"date": "2026-02-08", "ticket_id": "1290510", "card_type": "Young", "ts": 1770542612, "hour": 9, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1302915", "card_type": "Young", "ts": 1770544001, "hour": 9, "weekday": 0}, {"date": "2026-02-06", "ticket_id": "1300264", "card_type": "Plus", "ts": 1770361050, "hour": 6, "weekday": 5}]}, {"agent": "\u05d9\u05e4\u05d4", "group": "Service", "yest": 0, "wtd": 3, "mtd": 19, "total": 19, "forecast": 38, "csat": "-", "trend_data": [0, 0, 3, 3, 4, 3, 3, 0, 0, 3, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-13", "sales_details": [{"date": "2026-02-02", "ticket_id": "1298543", "card_type": "Young", "ts": 1770046725, "hour": 15, "weekday": 1}, {"date": "2026-02-04", "ticket_id": "1297949", "card_type": "Young", "ts": 1770202755, "hour": 10, "weekday": 3}, {"date": "2026-02-01", "ticket_id": "1297557", "card_type": "Young", "ts": 1769962476, "hour": 16, "weekday": 0}, {"date": "2026-02-05", "ticket_id": "1301475", "card_type": "Plus", "ts": 1770289157, "hour": 10, "weekday": 4}, {"date": "2026-02-04", "ticket_id": "1299473", "card_type": "Young", "ts": 1770205896, "hour": 11, "weekday": 3}, {"date": "2026-02-03", "ticket_id": "1298063", "card_type": "Plus", "ts": 1770102446, "hour": 7, "weekday": 2}, {"date": "2026-02-05", "ticket_id": "1296804", "card_type": "Plus", "ts": 1770272674, "hour": 6, "weekday": 4}, {"date": "2026-02-03", "ticket_id": "1298332", "card_type": "Plus", "ts": 1770149987, "hour": 20, "weekday": 2}, {"date": "2026-02-01", "ticket_id": "1297296", "card_type": "Young", "ts": 1769939069, "hour": 9, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1302716", "card_type": "Young", "ts": 1770557987, "hour": 13, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1298307", "card_type": "Plus", "ts": 1770545030, "hour": 10, "weekday": 0}, {"date": "2026-02-04", "ticket_id": "1295200", "card_type": "Young", "ts": 1770215947, "hour": 14, "weekday": 3}, {"date": "2026-02-03", "ticket_id": "1302772", "card_type": "Young", "ts": 1770111577, "hour": 9, "weekday": 2}, {"date": "2026-02-01", "ticket_id": "1299388", "card_type": "Young", "ts": 1769962584, "hour": 16, "weekday": 0}, {"date": "2026-02-02", "ticket_id": "1299608", "card_type": "Young", "ts": 1770037946, "hour": 13, "weekday": 1}, {"date": "2026-02-05", "ticket_id": "1301576", "card_type": "Plus", "ts": 1770291501, "hour": 11, "weekday": 4}, {"date": "2026-02-03", "ticket_id": "1300380", "card_type": "Plus", "ts": 1770146882, "hour": 19, "weekday": 2}, {"date": "2026-02-02", "ticket_id": "1298154", "card_type": "Plus", "ts": 1770015105, "hour": 6, "weekday": 1}, {"date": "2026-02-08", "ticket_id": "1300661", "card_type": "Plus", "ts": 1770552072, "hour": 12, "weekday": 0}]}, {"agent": "\u05d0\u05dc\u05d5\u05df", "group": "Service", "yest": 0, "wtd": 0, "mtd": 10, "total": 10, "forecast": 20, "csat": "-", "trend_data": [0, 0, 0, 1, 1, 5, 1, 2, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-6", "sales_details": [{"date": "2026-02-04", "ticket_id": "1298534", "card_type": "Young", "ts": 1770211233, "hour": 13, "weekday": 3}, {"date": "2026-02-05", "ticket_id": "1301425", "card_type": "Plus", "ts": 1770309248, "hour": 16, "weekday": 4}, {"date": "2026-02-06", "ticket_id": "1301699", "card_type": "Plus", "ts": 1770360779, "hour": 6, "weekday": 5}, {"date": "2026-02-02", "ticket_id": "1301414", "card_type": "Plus", "ts": 1770023625, "hour": 9, "weekday": 1}, {"date": "2026-02-04", "ticket_id": "1303451", "card_type": "Young", "ts": 1770206406, "hour": 12, "weekday": 3}, {"date": "2026-02-04", "ticket_id": "1299233", "card_type": "Young", "ts": 1770198105, "hour": 9, "weekday": 3}, {"date": "2026-02-03", "ticket_id": "1300401", "card_type": "Young", "ts": 1770133252, "hour": 15, "weekday": 2}, {"date": "2026-02-04", "ticket_id": "1300721", "card_type": "Young", "ts": 1770210118, "hour": 13, "weekday": 3}, {"date": "2026-02-04", "ticket_id": "1300811", "card_type": "Plus", "ts": 1770214920, "hour": 14, "weekday": 3}, {"date": "2026-02-06", "ticket_id": "1303461", "card_type": "Plus", "ts": 1770415835, "hour": 22, "weekday": 5}]}, {"agent": "\u05d0\u05e8\u05d6", "group": "Sales", "yest": 0, "wtd": 1, "mtd": 21, "total": 21, "forecast": 42, "csat": "-", "trend_data": [0, 0, 8, 4, 2, 0, 6, 0, 0, 1, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-19", "sales_details": [{"date": "2026-02-05", "ticket_id": "1299708", "card_type": "Young", "ts": 1770310913, "hour": 17, "weekday": 4}, {"date": "2026-02-02", "ticket_id": "1297615", "card_type": "Plus", "ts": 1770026523, "hour": 10, "weekday": 1}, {"date": "2026-02-05", "ticket_id": "1300385", "card_type": "Plus", "ts": 1770287661, "hour": 10, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1301147", "card_type": "Young", "ts": 1770308128, "hour": 16, "weekday": 4}, {"date": "2026-02-03", "ticket_id": "1298191", "card_type": "Young", "ts": 1770120418, "hour": 12, "weekday": 2}, {"date": "2026-02-01", "ticket_id": "1296978", "card_type": "Young", "ts": 1769963455, "hour": 16, "weekday": 0}, {"date": "2026-02-01", "ticket_id": "1295996", "card_type": "Young", "ts": 1769950564, "hour": 12, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1300101", "card_type": "Young", "ts": 1770537251, "hour": 7, "weekday": 0}, {"date": "2026-02-01", "ticket_id": "1297665", "card_type": "Young", "ts": 1769962828, "hour": 16, "weekday": 0}, {"date": "2026-02-02", "ticket_id": "1297968", "card_type": "Plus", "ts": 1770020112, "hour": 8, "weekday": 1}, {"date": "2026-02-05", "ticket_id": "1301140", "card_type": "Young", "ts": 1770305450, "hour": 15, "weekday": 4}, {"date": "2026-02-01", "ticket_id": "1297000", "card_type": "Young", "ts": 1769963135, "hour": 16, "weekday": 0}, {"date": "2026-02-02", "ticket_id": "1293988", "card_type": "Young", "ts": 1770047979, "hour": 15, "weekday": 1}, {"date": "2026-02-01", "ticket_id": "1294923", "card_type": "Young", "ts": 1769963827, "hour": 16, "weekday": 0}, {"date": "2026-02-01", "ticket_id": "1296247", "card_type": "Young", "ts": 1769937393, "hour": 9, "weekday": 0}, {"date": "2026-02-05", "ticket_id": "1297978", "card_type": "Plus", "ts": 1770273793, "hour": 6, "weekday": 4}, {"date": "2026-02-02", "ticket_id": "1297131", "card_type": "Young", "ts": 1770022722, "hour": 8, "weekday": 1}, {"date": "2026-02-03", "ticket_id": "1299323", "card_type": "Young", "ts": 1770124801, "hour": 13, "weekday": 2}, {"date": "2026-02-01", "ticket_id": "1295926", "card_type": "Young", "ts": 1769948891, "hour": 12, "weekday": 0}, {"date": "2026-02-01", "ticket_id": "1298202", "card_type": "Plus", "ts": 1769959274, "hour": 15, "weekday": 0}, {"date": "2026-02-05", "ticket_id": "1301145", "card_type": "Young", "ts": 1770302358, "hour": 14, "weekday": 4}]}, {"agent": "\u05dc\u05d0\u05d4", "group": "Service", "yest": 0, "wtd": 0, "mtd": 3, "total": 3, "forecast": 6, "csat": "-", "trend_data": [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0], "trend_arrow": "\u2b06\ufe0f", "trend_color": "#10b981", "trend_diff": "+1", "sales_details": [{"date": "2026-02-05", "ticket_id": "1302024", "card_type": "Plus", "ts": 1770314055, "hour": 17, "weekday": 4}, {"date": "2026-02-07", "ticket_id": "1301594", "card_type": "Young", "ts": 1770461275, "hour": 10, "weekday": 6}, {"date": "2026-02-06", "ticket_id": "1302168", "card_type": "Young", "ts": 1770393040, "hour": 15, "weekday": 5}]}, {"agent": "\u05d9\u05e2\u05e7\u05d1", "group": "Service", "yest": 0, "wtd": 0, "mtd": 12, "total": 13, "forecast": 24, "csat": "-", "trend_data": [0, 0, 2, 3, 1, 3, 3, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-12", "sales_details": [{"date": "2026-02-05", "ticket_id": "1300396", "card_type": "Young", "ts": 1770275774, "hour": 7, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1297165", "card_type": "Young", "ts": 1770297353, "hour": 13, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1301773", "card_type": "Young", "ts": 1770300442, "hour": 14, "weekday": 4}, {"date": "2026-02-02", "ticket_id": "1296039", "card_type": "Young", "ts": 1770043552, "hour": 14, "weekday": 1}, {"date": "2026-02-01", "ticket_id": "1296989", "card_type": "Plus", "ts": 1769942737, "hour": 10, "weekday": 0}, {"date": "2026-02-02", "ticket_id": "1298698", "card_type": "Plus", "ts": 1770036976, "hour": 12, "weekday": 1}, {"date": "2026-02-01", "ticket_id": "1297395", "card_type": "Young", "ts": 1769953698, "hour": 13, "weekday": 0}, {"date": "2026-02-04", "ticket_id": "1298194", "card_type": "Young", "ts": 1770220046, "hour": 15, "weekday": 3}, {"date": "2026-02-04", "ticket_id": "1289633", "card_type": "Plus", "ts": 1770219161, "hour": 15, "weekday": 3}, {"date": "2026-02-02", "ticket_id": "1288520", "card_type": "Young", "ts": 1770025579, "hour": 9, "weekday": 1}, {"date": "2025-12-25", "ticket_id": "1300331", "card_type": "Plus", "ts": 1766670910, "hour": 13, "weekday": 4}, {"date": "2026-02-04", "ticket_id": "1300331", "card_type": "Young", "ts": 1770216871, "hour": 14, "weekday": 3}, {"date": "2026-02-03", "ticket_id": "1299156", "card_type": "Plus", "ts": 1770096494, "hour": 5, "weekday": 2}]}, {"agent": "\u05e2\u05e0\u05ea", "group": "CS Managers", "yest": 0, "wtd": 0, "mtd": 11, "total": 11, "forecast": 22, "csat": "-", "trend_data": [0, 0, 1, 1, 2, 4, 3, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-11", "sales_details": [{"date": "2026-02-04", "ticket_id": "1296500", "card_type": "Young", "ts": 1770225653, "hour": 17, "weekday": 3}, {"date": "2026-02-04", "ticket_id": "1300673", "card_type": "Young", "ts": 1770220088, "hour": 15, "weekday": 3}, {"date": "2026-02-03", "ticket_id": "1299800", "card_type": "Young", "ts": 1770131300, "hour": 15, "weekday": 2}, {"date": "2026-02-05", "ticket_id": "1301076", "card_type": "Young", "ts": 1770292142, "hour": 11, "weekday": 4}, {"date": "2026-02-04", "ticket_id": "1299587", "card_type": "Young", "ts": 1770210561, "hour": 13, "weekday": 3}, {"date": "2026-02-01", "ticket_id": "1294403", "card_type": "Young", "ts": 1769926155, "hour": 6, "weekday": 0}, {"date": "2026-02-03", "ticket_id": "1299933", "card_type": "Plus", "ts": 1770141900, "hour": 18, "weekday": 2}, {"date": "2026-02-04", "ticket_id": "1299943", "card_type": "Young", "ts": 1770217732, "hour": 15, "weekday": 3}, {"date": "2026-02-05", "ticket_id": "1296275", "card_type": "Young", "ts": 1770315112, "hour": 18, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1301364", "card_type": "Young", "ts": 1770291798, "hour": 11, "weekday": 4}, {"date": "2026-02-02", "ticket_id": "1298461", "card_type": "Plus", "ts": 1770026248, "hour": 9, "weekday": 1}]}, {"agent": "Haya", "group": "Service", "yest": 0, "wtd": 0, "mtd": 0, "total": 0, "forecast": 0, "csat": "-", "trend_data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2796", "trend_color": "#10b981", "trend_diff": "0", "sales_details": []}, {"agent": "\u05e9\u05d5\u05d1\u05dc", "group": "Service", "yest": 0, "wtd": 1, "mtd": 6, "total": 6, "forecast": 12, "csat": "-", "trend_data": [0, 0, 3, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-4", "sales_details": [{"date": "2026-02-01", "ticket_id": "1297429", "card_type": "Young", "ts": 1769960957, "hour": 15, "weekday": 0}, {"date": "2026-02-01", "ticket_id": "1296576", "card_type": "Young", "ts": 1769941154, "hour": 10, "weekday": 0}, {"date": "2026-02-03", "ticket_id": "1299711", "card_type": "Plus", "ts": 1770127600, "hour": 14, "weekday": 2}, {"date": "2026-02-03", "ticket_id": "1299451", "card_type": "Plus", "ts": 1770116614, "hour": 11, "weekday": 2}, {"date": "2026-02-01", "ticket_id": "1299519", "card_type": "Young", "ts": 1769939080, "hour": 9, "weekday": 0}, {"date": "2026-02-08", "ticket_id": "1303242", "card_type": "Plus", "ts": 1770549905, "hour": 11, "weekday": 0}]}, {"agent": "\u05de\u05e2\u05d9\u05df", "group": "Service", "yest": 0, "wtd": 1, "mtd": 5, "total": 6, "forecast": 10, "csat": "-", "trend_data": [0, 0, 2, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-1", "sales_details": [{"date": "2026-02-08", "ticket_id": "1302832", "card_type": "Plus", "ts": 1770584625, "hour": 21, "weekday": 0}, {"date": "2026-02-01", "ticket_id": "1300228", "card_type": "Plus", "ts": 1769950717, "hour": 12, "weekday": 0}, {"date": "2025-12-22", "ticket_id": "1300501", "card_type": "Young", "ts": 1766419695, "hour": 16, "weekday": 1}, {"date": "2026-02-04", "ticket_id": "1300501", "card_type": "Young", "ts": 1770203647, "hour": 11, "weekday": 3}, {"date": "2026-02-01", "ticket_id": "1304034", "card_type": "Young", "ts": 1769940664, "hour": 10, "weekday": 0}, {"date": "2026-02-06", "ticket_id": "1298539", "card_type": "Plus", "ts": 1770350821, "hour": 4, "weekday": 5}]}, {"agent": "David", "group": "Sales", "yest": 0, "wtd": 0, "mtd": 3, "total": 3, "forecast": 6, "csat": "-", "trend_data": [0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-1", "sales_details": [{"date": "2026-02-05", "ticket_id": "1299815", "card_type": "Young", "ts": 1770316602, "hour": 18, "weekday": 4}, {"date": "2026-02-05", "ticket_id": "1300685", "card_type": "Young", "ts": 1770295747, "hour": 12, "weekday": 4}, {"date": "2026-02-07", "ticket_id": "1300793", "card_type": "Young", "ts": 1770478009, "hour": 15, "weekday": 6}]}, {"agent": "Duaa", "group": "Service", "yest": 0, "wtd": 0, "mtd": 0, "total": 0, "forecast": 0, "csat": "-", "trend_data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2796", "trend_color": "#10b981", "trend_diff": "0", "sales_details": []}, {"agent": "\u05d0\u05d5\u05e8\u05d5\u05df", "group": "Service", "yest": 0, "wtd": 0, "mtd": 1, "total": 2, "forecast": 2, "csat": "-", "trend_data": [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-1", "sales_details": [{"date": "2026-01-26", "ticket_id": "1297758", "card_type": "Plus", "ts": 1769458558, "hour": 20, "weekday": 1}, {"date": "2026-02-01", "ticket_id": "1297758", "card_type": "Young", "ts": 1769955196, "hour": 14, "weekday": 0}]}, {"agent": "\u05e9\u05e8\u05d5\u05df", "group": "Service", "yest": 0, "wtd": 1, "mtd": 4, "total": 4, "forecast": 8, "csat": "-", "trend_data": [0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0], "trend_arrow": "\u2796", "trend_color": "#10b981", "trend_diff": "0", "sales_details": [{"date": "2026-02-01", "ticket_id": "1297570", "card_type": "Young", "ts": 1769947992, "hour": 12, "weekday": 0}, {"date": "2026-02-05", "ticket_id": "1301422", "card_type": "Plus", "ts": 1770283458, "hour": 9, "weekday": 4}, {"date": "2026-02-08", "ticket_id": "1301775", "card_type": "Plus", "ts": 1770544387, "hour": 9, "weekday": 0}, {"date": "2026-02-06", "ticket_id": "1302901", "card_type": "Young", "ts": 1770400602, "hour": 17, "weekday": 5}]}, {"agent": "\u05d9\u05e8\u05d3\u05df", "group": "Service", "yest": 0, "wtd": 0, "mtd": 1, "total": 1, "forecast": 2, "csat": "-", "trend_data": [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2b07\ufe0f", "trend_color": "#ef4444", "trend_diff": "-1", "sales_details": [{"date": "2026-02-01", "ticket_id": "1296450", "card_type": "Plus", "ts": 1769938078, "hour": 9, "weekday": 0}]}, {"agent": "\u05e2\u05d3\u05d9", "group": "Service", "yest": 0, "wtd": 0, "mtd": 0, "total": 0, "forecast": 0, "csat": "-", "trend_data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2796", "trend_color": "#10b981", "trend_diff": "0", "sales_details": []}, {"agent": "Eti", "group": "Service", "yest": 0, "wtd": 0, "mtd": 0, "total": 0, "forecast": 0, "csat": "-", "trend_data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "trend_arrow": "\u2796", "trend_color": "#10b981", "trend_diff": "0", "sales_details": []}];
+        const groups = ["CS Managers", "Sales", "Service"];
+        const meta = {"today": "2026-02-12", "month_start": "2026-02-01", "week_start": "2026-02-08", "yesterday": "2026-02-11", "report_date": "12/02/2026", "day_name": "\u05d9\u05d5\u05dd \u05d7\u05de\u05d9\u05e9\u05d9", "y_prev": 2, "p_prev": 2, "current_month_key": "2026-02"};
+
+        Chart.register(ChartDataLabels);
+
+        let activeFilters = new Set(['Service', 'Service Desk', 'תמיכה']); 
+        let currentMonthFilter = meta.current_month_key; 
+
+        let mainChart = null;
+        let scienceChart = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initClock();
+            initMonthFilter();
+            initFilters();
+
+            // --- Live Sticky Offset Calculation ---
+            const stickyHeader = document.getElementById('stickyHeader');
+            const observer = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    // Update CSS Variable with current height
+                    const h = entry.target.offsetHeight;
+                    document.documentElement.style.setProperty('--header-height', (h + 10) + 'px');
+                }
+            });
+            observer.observe(stickyHeader);
+
+            updateAllViews(); 
+            document.addEventListener('keydown', (e) => { if(e.key === "Escape") closeModal(); });
+        });
+
+        // --- CLOCK ---
+        function initClock() {
+            function update() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                document.getElementById('liveClock').innerText = timeString;
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        function setTab(id) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function initMonthFilter() {
+            const months = new Set();
+            agents.forEach(a => {
+                a.sales_details.forEach(s => months.add(s.date.substring(0, 7)));
+            });
+            if (months.size === 0) months.add(meta.today.substring(0, 7));
+
+            const sortedMonths = Array.from(months).sort().reverse();
+            const select = document.getElementById('monthFilter');
+            sortedMonths.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.innerText = m;
+                if (m === currentMonthFilter) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function onMonthChange() {
+            currentMonthFilter = document.getElementById('monthFilter').value;
+            updateAllViews();
+        }
+
+        function initFilters() {
+            const container = document.getElementById('filterContainer');
+            groups.forEach(g => {
+                const btn = document.createElement('div');
+                btn.className = 'filter-pill';
+                btn.innerText = g;
+                if (activeFilters.has(g)) btn.classList.add('active');
+
+                btn.onclick = () => {
+                    if (activeFilters.has(g)) {
+                        activeFilters.delete(g);
+                        btn.classList.remove('active');
+                    } else {
+                        activeFilters.add(g);
+                        btn.classList.add('active');
+                    }
+                    updateAllViews();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function updateAllViews() {
+            const displayAgents = agents.map(a => {
+                const monthSales = a.sales_details.filter(s => s.date.startsWith(currentMonthFilter));
+                return { ...a, tempMtd: monthSales.length, tempSales: monthSales };
+            });
+
+            const filteredAgents = displayAgents.filter(a => activeFilters.has(a.group));
+            filteredAgents.sort((a,b) => b.tempMtd - a.tempMtd);
+
+            const sourceForStats = filteredAgents; 
+
+            let totY = 0, totP = 0;
+            const dailyStats = {}; 
+            const heatmapStats = Array.from({length: 24}, () => Array(7).fill(0));
+
+            sourceForStats.forEach(a => {
+                a.tempSales.forEach(s => {
+                    if(s.card_type === 'Young') totY++; else totP++;
+                    if(!dailyStats[s.date]) dailyStats[s.date] = {Young:0, Plus:0};
+                    if(s.card_type === 'Young') dailyStats[s.date].Young++; else dailyStats[s.date].Plus++;
+                    heatmapStats[s.hour][s.weekday]++;
+                });
+            });
+
+            renderCards(totY, totP);
+            renderTable(filteredAgents);
+            renderMainChart(filteredAgents);
+            renderScienceChart(dailyStats, totY, totP);
+            renderHeatmapGrid(heatmapStats);
+        }
+
+        function renderCards(y, p) {
+            document.getElementById('card-total').innerText = (y + p).toLocaleString();
+            document.getElementById('card-young').innerText = y.toLocaleString();
+            document.getElementById('card-plus').innerText = p.toLocaleString();
+            document.getElementById('sci-young').innerText = y.toLocaleString();
+            document.getElementById('sci-plus').innerText = p.toLocaleString();
+        }
+
+        function renderTable(agentsList) {
+            const tbody = document.getElementById('agentTableBody');
+            tbody.innerHTML = '';
+
+            const isCurrent = (currentMonthFilter === meta.current_month_key);
+            document.querySelectorAll('.col-daily, .col-forecast').forEach(c => c.style.visibility = isCurrent ? 'visible' : 'hidden');
+
+            agentsList.forEach((a, idx) => {
+                const tr = document.createElement('tr');
+                const canvasId = `spark_${idx}`;
+                const arrowColor = a.trend_arrow === '⬆️' ? 'var(--success)' : 'var(--danger)';
+                const valYest = isCurrent ? a.yest : '-';
+                const valWtd = isCurrent ? a.wtd : '-';
+                const valFc = isCurrent ? a.forecast : '-';
+                const clk = (a.tempMtd > 0) ? `onclick="openDrillMonth('${a.agent}')" class="clickable"` : `class="clickable zero"`;
+
+                tr.innerHTML = `
+                    <td>
+                        <span class="agent-name">${a.agent}</span>
+                        <span class="group-tag">${a.group}</span>
+                    </td>
+                    <td>${valYest}</td>
+                    <td>${valWtd}</td>
+                    <td ${clk} style="font-weight:900; color: var(--brand-blue); font-size:1.1rem;">${a.tempMtd}</td>
+                    <td style="color: var(--text-muted)">${valFc}</td>
+                    <td>
+                        <div class="trend-wrapper">
+                            <span class="trend-arrow" style="color:${a.trend_color}">${a.trend_arrow}</span>
+                            <span class="trend-diff" style="color:${a.trend_color}">${a.trend_diff}</span>
+                            <canvas id="${canvasId}" class="mini-chart"></canvas>
+                        </div>
+                    </td>
+                    <td>${a.csat}</td>
+                `;
+                tbody.appendChild(tr);
+                renderSparkline(canvasId, a.trend_data, a.trend_color);
+            });
+        }
+
+        function renderMainChart(data) {
+            if (mainChart) mainChart.destroy();
+            const ctx = document.getElementById('mainBarChart').getContext('2d');
+            const chartData = data.filter(d => d.tempMtd > 0);
+
+            mainChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(d => d.agent),
+                    datasets: [{
+                        label: 'הנפקות',
+                        data: chartData.map(d => d.tempMtd),
+                        backgroundColor: chartData.map(d => d.group === 'Sales' ? '#2EA7EB' : '#10b981'),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: {display: false}, 
+                        title: {display: true, text: 'ביצועי נציגים (' + currentMonthFilter + ')', color: '#94a3b8'},
+                        datalabels: { color: '#fff', anchor: 'end', align: 'top', font: { weight: 'bold' } }
+                    },
+                    scales: { y: { beginAtZero: true, grid: {color: '#334151'} }, x: { grid: {display: false}, ticks: {color: '#cbd5e1'} } }
+                }
+            });
+        }
+
+        function renderScienceChart(dailyStats, totY, totP) {
+            if (scienceChart) scienceChart.destroy();
+            const ctx = document.getElementById('scienceChart').getContext('2d');
+            const sortedDates = Object.keys(dailyStats).sort();
+            const labels = sortedDates.map(d => d.substring(5)); 
+            const dYoung = sortedDates.map(d => dailyStats[d].Young);
+            const dPlus = sortedDates.map(d => dailyStats[d].Plus);
+
+            scienceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Young', data: dYoung, borderColor: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.1)', tension: 0.3, fill: true },
+                        { label: 'Plus', data: dPlus, borderColor: '#2EA7EB', backgroundColor: 'rgba(46, 167, 235, 0.1)', tension: 0.3, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        title: {display: true, text: 'התפלגות יומית (' + currentMonthFilter + ')', color: '#ccc'},
+                        datalabels: { display: false } 
+                    },
+                    scales: { y: {beginAtZero: true, grid: {color: '#334151'}} }
+                }
+            });
+        }
+
+        function renderHeatmapGrid(matrix) {
+            const el = document.getElementById('heatmapGrid');
+            el.innerHTML = '';
+            const days = ['א','ב','ג','ד','ה','ו','ש'];
+            el.innerHTML += `<div class="hm-cell hm-head">שעה</div>`;
+            days.forEach(d => el.innerHTML += `<div class="hm-cell hm-head">${d}</div>`);
+
+            let max = 0;
+            matrix.forEach(r => r.forEach(v => {if(v>max) max=v}));
+            if(max===0) max=1;
+
+            for(let h=8; h<=22; h++) {
+                el.innerHTML += `<div class="hm-cell hm-head">${h}:00</div>`;
+                for(let d=0; d<7; d++) {
+                    const val = matrix[h][d];
+                    const alpha = Math.max(0.1, val/max);
+                    const bg = `rgba(46, 167, 235, ${alpha})`; 
+                    el.innerHTML += `<div class="hm-cell" style="background:${bg}">${val>0?val:''}</div>`;
+                }
+            }
+        }
+
+        function renderSparkline(id, data, color) {
+            const ctx = document.getElementById(id).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(14).fill(''),
+                    datasets: [{ 
+                        data: data, 
+                        borderColor: color, 
+                        backgroundColor: color + '33', 
+                        borderWidth: 2, 
+                        pointRadius: 1, 
+                        pointBackgroundColor: color,
+                        tension: 0.3, 
+                        fill: true 
+                    }]
+                },
+                options: {
+                    responsive: false, maintainAspectRatio: false,
+                    plugins: { legend: {display:false}, tooltip: {enabled: false}, datalabels: {display: false} },
+                    scales: { x: {display:false}, y: {display:false, min: 0} }
+                }
+            });
+        }
+
+        function openDrillMonth(agentName) {
+            const agent = agents.find(a => a.agent === agentName);
+            if(!agent) return;
+            const sales = agent.sales_details.filter(s => s.date.startsWith(currentMonthFilter));
+            if(sales.length === 0) return;
+
+            sales.sort((a,b) => b.ts - a.ts);
+            document.getElementById('modalTitle').innerText = `${agentName} - ${currentMonthFilter} (${sales.length})`;
+            const mb = document.getElementById('modalBody');
+            mb.innerHTML = '';
+            sales.forEach(s => {
+                let tickDisplay = s.ticket_id === 'N/A' ? '-' : 
+                    `<span class="ticket-badge">#${s.ticket_id}</span> <span class="copy-btn" onclick="copyText('${s.ticket_id}', this)">📋</span>`;
+                mb.innerHTML += `<tr><td>${s.date}</td><td>${s.card_type}</td><td>${tickDisplay}</td></tr>`;
+            });
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+        function copyText(txt, btn) {
+            navigator.clipboard.writeText(txt).then(() => {
+                btn.innerText = '✅'; setTimeout(() => btn.innerText = '📋', 1500);
+            });
+        }
+    </script>
+    </body>
+    </html>
+    
